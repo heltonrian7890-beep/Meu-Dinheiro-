@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<meta name="description" content="Controle suas despesas, receitas e economias.">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Meu Dinheiro</title>
+<style>
+:root{--bg:#0b1220;--panel:#131e30;--panel2:#1a2940;--text:#f4f7fb;--muted:#9aabc2;--green:#36d399;--red:#ff6b78;--blue:#70a7ff;--line:#26364e}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#101b2d,#09111e 55%);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+header{padding:24px 18px 16px;max-width:760px;margin:auto}header .eyebrow{color:var(--green);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase}h1{font-size:28px;margin:5px 0 2px}header p{margin:0;color:var(--muted);font-size:14px}
+main{max-width:760px;margin:auto;padding:0 14px 40px}
+.card{background:rgba(19,30,48,.96);border:1px solid var(--line);border-radius:18px;padding:17px;margin:0 0 14px;box-shadow:0 8px 28px #0002}
+.balance-label,.muted{color:var(--muted);font-size:13px}.balance{font-size:34px;font-weight:800;letter-spacing:-1px;margin:4px 0 14px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:var(--panel2);padding:12px;border-radius:13px}.stat span{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:18px;margin-top:4px}
+.goal-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.goal-head strong{font-size:18px}.progress{height:11px;background:#26364e;border-radius:20px;overflow:hidden;margin:12px 0 7px}.progress div{height:100%;background:linear-gradient(90deg,#24bd8c,#80e4b8);width:0%;border-radius:20px;transition:width .25s}
+.section-title{font-size:18px;margin:20px 3px 10px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}input,select{width:100%;padding:13px 12px;border-radius:11px;border:1px solid var(--line);background:#0d1727;color:var(--text);font:inherit;outline:none}input:focus,select:focus{border-color:var(--blue)}
+.full{grid-column:1/-1}.type-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.type-btn{border:1px solid var(--line);border-radius:11px;background:#0d1727;color:var(--muted);padding:11px 5px;font-weight:700}.type-btn.active{border-color:var(--green);color:var(--green);background:#12332e}
+button.primary{width:100%;border:0;border-radius:12px;padding:14px;background:var(--green);color:#06251b;font-size:16px;font-weight:800;margin-top:12px}
+.toolbar{display:flex;gap:8px;align-items:center}.toolbar select{max-width:170px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.item-title{font-weight:650}.item-sub{font-size:12px;color:var(--muted);margin-top:3px}.amount{font-weight:800;white-space:nowrap}.income{color:var(--green)}.expense{color:var(--red)}.saving{color:var(--blue)}
+.delete{border:0;background:transparent;color:var(--muted);font-size:12px;padding:6px;margin-left:5px}
+.empty{text-align:center;color:var(--muted);padding:22px 5px;font-size:14px}
+.note{font-size:12px;color:var(--muted);line-height:1.5;margin:10px 2px 0}
+footer{text-align:center;color:#71839d;font-size:11px;padding:8px 20px 24px}
+@media(min-width:600px){header{padding-top:34px}.card{padding:20px}}
+
+/* Gráfico de gastos por categoria */
+.chart-wrap{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
+.donut{width:150px;height:150px;border-radius:50%;background:conic-gradient(#26364e 0deg 360deg);position:relative;display:grid;place-items:center;flex-shrink:0}
+.donut:after{content:"";position:absolute;width:94px;height:94px;border-radius:50%;background:var(--panel)}
+.donut-center{position:relative;z-index:1;text-align:center;font-size:11px;color:var(--muted)}
+.donut-center strong{display:block;color:var(--text);font-size:15px;margin-top:3px}
+.legend{display:grid;gap:10px;min-width:0}
+.legend-row{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;font-size:12px}
+.legend-dot{width:9px;height:9px;border-radius:50%}
+.legend-name{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend-value{font-weight:700;white-space:nowrap}
+.chart-empty{color:var(--muted);font-size:13px;text-align:center;padding:12px 0}
+@media(max-width:380px){.chart-wrap{grid-template-columns:1fr;justify-items:center}.legend{width:100%}}
+
+
+.forecast-main{font-size:23px;font-weight:800;margin:6px 0;color:var(--green)}
+.forecast-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.forecast-stat{background:var(--panel2);padding:12px;border-radius:12px;min-width:0}
+.forecast-stat span{display:block;color:var(--muted);font-size:12px}
+.forecast-stat strong{display:block;font-size:15px;margin-top:5px;overflow-wrap:anywhere}
+
+
+.fuel-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.fuel-stat{background:var(--panel2);padding:12px;border-radius:12px;min-width:0}
+.fuel-stat span{display:block;color:var(--muted);font-size:12px}
+.fuel-stat strong{display:block;font-size:17px;margin-top:5px;overflow-wrap:anywhere}
+.fuel-history-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.fuel-history-item:last-child{border-bottom:0}
+.fuel-history-title{font-weight:650}
+.fuel-history-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.fuel-history-right{text-align:right;white-space:nowrap}
+.fuel-delete{border:0;background:transparent;color:var(--muted);font-size:12px;padding:6px}
+
+</style>
+</head>
+<body>
+<header><div class="eyebrow">Seu controle financeiro</div><h1>Meu Dinheiro</h1><p>Organize seu dinheiro, uma movimentação de cada vez.</p></header>
+<main>
+<section class="card">
+  <div class="balance-label">Saldo geral livre (sem a reserva da gasolina)</div>
+  <div class="balance" id="balance">R$ 0,00</div>
+  <div class="stats">
+    <div class="stat"><span>Receitas</span><strong class="income" id="income">R$ 0,00</strong></div>
+    <div class="stat"><span>Despesas</span><strong class="expense" id="expenses">R$ 0,00</strong></div>
+  </div>
+</section>
+<section class="card">
+  <div class="goal-head"><div><div class="muted">Sua meta de economia</div><strong id="goalAmount">R$ 5.000,00</strong></div><strong id="goalPercent">0%</strong></div>
+  <div class="progress"><div id="goalBar"></div></div>
+  <div class="muted" id="goalText">Você ainda não registrou economias.</div>
+</section>
+
+<section class="card" aria-label="Previsão de economia">
+  <div class="muted">Previsão para alcançar sua meta</div>
+  <div class="forecast-main" id="forecastDate">Calculando...</div>
+  <div class="muted" id="forecastMessage">Estimativa baseada no seu histórico de economias.</div>
+  <div class="forecast-grid">
+    <div class="forecast-stat"><span>Média guardada por mês</span><strong id="forecastMonthly">R$ 0,00</strong></div>
+    <div class="forecast-stat"><span>Tempo estimado restante</span><strong id="forecastMonths">—</strong></div>
+  </div>
+  <p class="note">É uma estimativa: o prazo muda conforme os valores que você registra como Economia.</p>
+</section>
+
+
+<h2 class="section-title">Controle de combustível ⛽</h2>
+<section class="card">
+  <div class="muted">Carteira de combustível independente do seu dinheiro geral</div>
+
+  <div class="fuel-budget-box" style="background:#0d1727;border:1px solid var(--line);border-radius:14px;padding:13px;margin:13px 0">
+    <div class="goal-head"><div><div class="muted">Saldo separado para gasolina (não entra no saldo geral)</div><strong id="fuelBudgetRemaining">R$ 0,00</strong></div><strong id="fuelBudgetPercent">0%</strong></div>
+    <div class="progress"><div id="fuelBudgetBar"></div></div>
+    <div class="muted" id="fuelBudgetSpent">Este valor fica separado do saldo geral. Os abastecimentos reduzem somente o saldo da gasolina.</div>
+    <p class="note">Separação real: ao definir o orçamento, esse valor é reservado e descontado do saldo geral livre. Os abastecimentos diminuem somente a carteira de gasolina, sem descontar novamente do saldo geral.</p>
+    <div style="margin-top:14px">
+      <label for="fuelBudgetInput">Quanto você separa para gasolina por mês? (R$)</label>
+      <input id="fuelBudgetInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ex.: 400,00">
+      <button class="primary" id="saveFuelBudget" type="button">Salvar saldo mensal</button>
+    </div>
+  </div>
+
+  <div class="fuel-summary">
+    <div class="fuel-stat"><span>Gasto neste mês</span><strong id="fuelMonthTotal">R$ 0,00</strong></div>
+    <div class="fuel-stat"><span>Litros neste mês</span><strong id="fuelMonthLiters">0,00 L</strong></div>
+  </div>
+  <form id="fuelForm">
+    <div class="form-grid">
+      <div><label for="fuelAmount">Valor pago (R$)</label><input id="fuelAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Ex.: 100,00" required></div>
+      <div><label for="fuelLiters">Litros abastecidos</label><input id="fuelLiters" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Ex.: 15,5" required></div>
+      <div><label for="fuelDate">Data</label><input id="fuelDate" type="date" required></div>
+      <div><label for="fuelKm">Quilometragem (opcional)</label><input id="fuelKm" type="number" min="0" step="1" inputmode="numeric" placeholder="Ex.: 25400"></div>
+      <div class="full"><label for="fuelStation">Posto ou observação (opcional)</label><input id="fuelStation" maxlength="70" placeholder="Ex.: Posto da avenida"></div>
+    </div>
+    <div class="muted" id="fuelPricePreview" style="margin-top:10px">Preço por litro: —</div>
+    <button class="primary" type="submit">Salvar abastecimento</button>
+  </form>
+  <div class="goal-head" style="margin-top:20px"><strong>Histórico de abastecimentos</strong><span class="muted" id="fuelCount">0 registros</span></div>
+  <div id="fuelHistory"><div class="empty">Nenhum abastecimento registrado.</div></div>
+  <p class="note">Os abastecimentos ficam salvos neste aparelho, separados das despesas comuns para evitar contar o mesmo gasto duas vezes.</p>
+</section>
+
+<h2 class="section-title">Adicionar movimentação</h2>
+<section class="card">
+  <div class="type-row">
+    <button class="type-btn active" data-type="expense">Gasto</button>
+    <button class="type-btn" data-type="income">Receita</button>
+    <button class="type-btn" data-type="saving">Economia</button>
+  </div>
+  <form id="entryForm">
+    <div class="form-grid">
+      <div><label for="amount">Valor (R$)</label><input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00" required></div>
+      <div><label for="date">Data</label><input id="date" type="date" required></div>
+      <div class="full"><label for="description">Descrição</label><input id="description" maxlength="70" placeholder="Ex.: almoço, salário, mercado" required></div>
+      <div class="full"><label for="category">Categoria</label><select id="category"><option>Geral</option><option>Alimentação</option><option>Transporte</option><option>Moradia</option><option>Contas</option><option>Lazer</option><option>Saúde</option><option>Salário</option><option>Extra</option><option>Reserva</option></select></div>
+    </div>
+    <button class="primary" type="submit">Salvar movimentação</button>
+  </form>
+  <p class="note">A renda de R$ 3.500 é uma referência inicial; registre o salário como receita quando receber.</p>
+</section>
+
+
+<h2 class="section-title">Para onde vai seu dinheiro?</h2>
+<section class="card" aria-label="Gráfico de gastos por categoria">
+  <div class="muted" style="margin-bottom:13px">Distribuição das despesas registradas</div>
+  <div class="chart-wrap">
+    <div class="donut" id="expenseDonut" role="img" aria-label="Gráfico de despesas por categoria">
+      <div class="donut-center">Total gasto<strong id="chartTotal">R$ 0,00</strong></div>
+    </div>
+    <div class="legend" id="expenseLegend"><div class="chart-empty">Registre um gasto para visualizar o gráfico.</div></div>
+  </div>
+  <p class="note">O gráfico considera somente movimentações do tipo Gasto. Os valores são atualizados automaticamente quando você salva ou exclui um registro.</p>
+</section>
+
+<div class="toolbar"><h2 class="section-title" style="flex:1">Histórico</h2><select id="filter"><option value="all">Tudo</option><option value="expense">Gastos</option><option value="income">Receitas</option><option value="saving">Economias</option></select></div>
+<section class="card" id="history"><div class="empty">Nenhuma movimentação por enquanto.</div></section>
+<section class="card">
+  <div class="goal-head"><div><strong>Configurações</strong><div class="muted">Personalize sua meta</div></div></div>
+  <div class="form-grid" style="margin-top:12px">
+    <div class="full"><label for="goalInput">Meta de economia (R$)</label><input id="goalInput" type="number" min="1" step="0.01" value="5000"></div>
+  </div>
+  <button class="primary" id="saveGoal">Atualizar meta</button>
+  <p class="note">Seus registros ficam salvos neste aparelho e neste navegador. Limpar os dados do navegador pode apagar seu histórico. Este app não acessa seu banco nem movimenta dinheiro.</p>
+</section>
+</main>
+<footer>Meu Dinheiro • Controle manual e privado no seu aparelho</footer>
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const today=new Date(); $('date').value=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+let records=JSON.parse(localStorage.getItem('md_records')||'[]');
+let goal=Number(localStorage.getItem('md_goal')||5000);
+let fuelRecords=JSON.parse(localStorage.getItem('md_fuel_records')||'[]');
+let fuelBudget=Number(localStorage.getItem('md_fuel_budget')||0);
+const fuelToday=new Date();
+$('fuelDate').value=new Date(fuelToday.getTime()-fuelToday.getTimezoneOffset()*60000).toISOString().slice(0,10);
+
+let type='expense';
+$('goalInput').value=goal;
+document.querySelectorAll('.type-btn').forEach(btn=>btn.addEventListener('click',()=>{
+  type=btn.dataset.type;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.toggle('active',b===btn));
+}));
+function save(){localStorage.setItem('md_records',JSON.stringify(records));localStorage.setItem('md_goal',String(goal));}
+
+const chartColors=['#36d399','#70a7ff','#ffb454','#ff6b78','#b69cff','#52c7d8','#e7d36f','#f08ab5','#8bd17c','#a7b4c8'];
+
+function saveFuel(){localStorage.setItem('md_fuel_records',JSON.stringify(fuelRecords));}
+function renderFuel(){
+  const now=new Date();
+  const monthKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthItems=fuelRecords.filter(x=>(x.date||'').slice(0,7)===monthKey);
+  const monthTotal=monthItems.reduce((s,x)=>s+Number(x.amount||0),0);
+  const monthLiters=monthItems.reduce((s,x)=>s+Number(x.liters||0),0);
+  $('fuelMonthTotal').textContent=money(monthTotal);
+  $('fuelMonthLiters').textContent=monthLiters.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' L';
+  $('fuelBudgetInput').value=fuelBudget||'';
+  const fuelRemaining=Math.max(0,fuelBudget-monthTotal);
+  const budgetPct=fuelBudget>0?Math.min(100,monthTotal/fuelBudget*100):0;
+  $('fuelBudgetRemaining').textContent=fuelBudget>0?money(fuelRemaining):'Defina seu saldo';
+  $('fuelBudgetPercent').textContent=fuelBudget>0?Math.floor(budgetPct)+'%':'—';
+  $('fuelBudgetBar').style.width=budgetPct+'%';
+  $('fuelBudgetSpent').textContent=fuelBudget>0
+    ?`Você já usou ${money(monthTotal)} de ${money(fuelBudget)} neste mês${monthTotal>fuelBudget?' • limite ultrapassado':''}.`
+    :'Defina quanto vai separar para gasolina. Ao salvar, o valor reservado será descontado do saldo geral livre.';
+  $('fuelCount').textContent=fuelRecords.length+' '+(fuelRecords.length===1?'registro':'registros');
+  const history=$('fuelHistory');
+  history.innerHTML='';
+  if(!fuelRecords.length){
+    history.innerHTML='<div class="empty">Nenhum abastecimento registrado.</div>';
+    return;
+  }
+  [...fuelRecords].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).forEach(x=>{
+    const row=document.createElement('div');row.className='fuel-history-item';
+    const left=document.createElement('div');
+    const title=document.createElement('div');title.className='fuel-history-title';
+    title.textContent=(Number(x.liters).toLocaleString('pt-BR',{maximumFractionDigits:2})+' L • '+money(x.amount));
+    const sub=document.createElement('div');sub.className='fuel-history-sub';
+    const parts=[x.date.split('-').reverse().join('/')];
+    if(x.km!==null && x.km!==undefined && x.km!=='')parts.push(Number(x.km).toLocaleString('pt-BR')+' km');
+    if(x.station)parts.push(x.station);
+    parts.push(money(Number(x.amount)/Number(x.liters))+'/L');
+    sub.textContent=parts.join(' • ');
+    left.append(title,sub);
+    const right=document.createElement('div');right.className='fuel-history-right';
+    const del=document.createElement('button');del.className='fuel-delete';del.textContent='Excluir';
+    del.addEventListener('click',()=>{
+      if(confirm('Excluir este abastecimento?')){
+        fuelRecords=fuelRecords.filter(r=>r.id!==x.id);saveFuel();renderFuel();
+      }
+    });
+    right.append(del);row.append(left,right);history.append(row);
+  });
+}
+function updateFuelPrice(){
+  const amount=Number($('fuelAmount').value), liters=Number($('fuelLiters').value);
+  $('fuelPricePreview').textContent=(amount>0&&liters>0&&Number.isFinite(amount/liters))
+    ?'Preço por litro: '+money(amount/liters)
+    :'Preço por litro: —';
+}
+
+function renderExpenseChart(){
+  const expenses=records.filter(x=>x.type==='expense');
+  const total=expenses.reduce((sum,x)=>sum+x.amount,0);
+  $('chartTotal').textContent=money(total);
+  const grouped={};
+  expenses.forEach(x=>{const name=x.category||'Geral';grouped[name]=(grouped[name]||0)+x.amount;});
+  const entries=Object.entries(grouped).sort((a,b)=>b[1]-a[1]);
+  const legend=$('expenseLegend');
+  if(!entries.length){
+    $('expenseDonut').style.background='conic-gradient(#26364e 0deg 360deg)';
+    legend.innerHTML='<div class="chart-empty">Registre um gasto para visualizar o gráfico.</div>';
+    return;
+  }
+  let angle=0;
+  const segments=entries.map(([name,value],i)=>{
+    const start=angle;angle+=value/total*360;
+    return `${chartColors[i%chartColors.length]} ${start}deg ${angle}deg`;
+  });
+  $('expenseDonut').style.background=`conic-gradient(${segments.join(',')})`;
+  legend.innerHTML='';
+  entries.forEach(([name,value],i)=>{
+    const row=document.createElement('div');row.className='legend-row';
+    const dot=document.createElement('span');dot.className='legend-dot';dot.style.background=chartColors[i%chartColors.length];
+    const label=document.createElement('span');label.className='legend-name';label.textContent=name;
+    const amount=document.createElement('strong');amount.className='legend-value';amount.textContent=money(value);
+    row.append(dot,label,amount);legend.append(row);
+  });
+}
+
+
+function renderSavingsForecast(){
+  const savedRecords=records.filter(x=>x.type==='saving' && Number(x.amount)>0);
+  const savedTotal=savedRecords.reduce((sum,x)=>sum+x.amount,0);
+  const remaining=Math.max(0,goal-savedTotal);
+  const dateEl=$('forecastDate');
+  const messageEl=$('forecastMessage');
+  const monthlyEl=$('forecastMonthly');
+  const monthsEl=$('forecastMonths');
+
+  if(remaining<=0){
+    dateEl.textContent='Meta alcançada!';
+    messageEl.textContent='Parabéns! Você já chegou à sua meta de economia.';
+    monthlyEl.textContent=money(savedTotal);
+    monthsEl.textContent='0 meses';
+    return;
+  }
+  if(!savedRecords.length){
+    dateEl.textContent='Ainda sem previsão';
+    messageEl.textContent='Registre valores do tipo Economia para calcular seu ritmo.';
+    monthlyEl.textContent=money(0);
+    monthsEl.textContent='—';
+    return;
+  }
+
+  const sortedDates=savedRecords.map(x=>x.date).filter(Boolean).sort();
+  const first=sortedDates[0] ? new Date(sortedDates[0]+'T12:00:00') : new Date();
+  const now=new Date();
+  const monthsElapsed=Math.max(1,(now.getFullYear()-first.getFullYear())*12+(now.getMonth()-first.getMonth())+1);
+  const monthlyAverage=savedTotal/monthsElapsed;
+
+  monthlyEl.textContent=money(monthlyAverage);
+  if(monthlyAverage<=0){
+    dateEl.textContent='Ainda sem previsão';
+    messageEl.textContent='Registre novas economias para estimar quando chegará à meta.';
+    monthsEl.textContent='—';
+    return;
+  }
+
+  const monthsNeeded=Math.ceil(remaining/monthlyAverage);
+  const projected=new Date(now.getFullYear(),now.getMonth()+monthsNeeded,1);
+  const projectedLabel=projected.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  dateEl.textContent=projectedLabel.charAt(0).toUpperCase()+projectedLabel.slice(1);
+  messageEl.textContent=`Mantendo a média atual, faltam ${money(remaining)} para completar sua meta.`;
+  monthsEl.textContent=monthsNeeded===1?'1 mês':`${monthsNeeded} meses`;
+}
+
+function render(){
+ renderFuel();
+ renderExpenseChart();
+ renderSavingsForecast();
+ const inc=records.filter(x=>x.type==='income').reduce((s,x)=>s+x.amount,0);
+ const exp=records.filter(x=>x.type==='expense').reduce((s,x)=>s+x.amount,0);
+ const sav=records.filter(x=>x.type==='saving').reduce((s,x)=>s+x.amount,0);
+ $('balance').textContent=money(inc-exp-sav-fuelBudget);
+ $('income').textContent=money(inc);$('expenses').textContent=money(exp);
+ $('goalAmount').textContent=money(goal);
+ const pct=goal>0?Math.min(100,sav/goal*100):0;
+ $('goalPercent').textContent=Math.floor(pct)+'%';$('goalBar').style.width=pct+'%';
+ $('goalText').textContent=`${money(sav)} guardados • faltam ${money(Math.max(0,goal-sav))}`;
+ const filter=$('filter').value;
+ const list=records.filter(x=>filter==='all'||x.type===filter).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+ $('history').innerHTML=list.length?'':'<div class="empty">Nenhuma movimentação nesta categoria.</div>';
+ list.forEach(x=>{
+  const row=document.createElement('div');row.className='item';
+  const left=document.createElement('div');const title=document.createElement('div');title.className='item-title';title.textContent=x.description;
+  const sub=document.createElement('div');sub.className='item-sub';sub.textContent=`${x.date.split('-').reverse().join('/')} • ${x.category}`;
+  left.append(title,sub);
+  const right=document.createElement('div');right.style.textAlign='right';
+  const amt=document.createElement('span');amt.className='amount '+x.type;amt.textContent=(x.type==='income'?'+':x.type==='expense'?'-':'')+money(x.amount);
+  const del=document.createElement('button');del.className='delete';del.textContent='Excluir';del.setAttribute('aria-label','Excluir '+x.description);
+  del.addEventListener('click',()=>{if(confirm('Excluir esta movimentação?')){records=records.filter(r=>r.id!==x.id);save();render();}});
+  right.append(amt,del);row.append(left,right);$('history').append(row);
+ });
+}
+$('entryForm').addEventListener('submit',e=>{
+ e.preventDefault();const amount=Number($('amount').value);
+ if(!Number.isFinite(amount)||amount<=0){alert('Informe um valor válido.');return;}
+ records.push({id:Date.now()+Math.random(),type,amount,description:$('description').value.trim(),category:$('category').value,date:$('date').value});
+ save();$('entryForm').reset();$('date').value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);render();
+});
+$('filter').addEventListener('change',render);
+
+$('saveFuelBudget').addEventListener('click',()=>{
+  const value=Number($('fuelBudgetInput').value);
+  if(!Number.isFinite(value)||value<0){alert('Informe um orçamento válido.');return;}
+  fuelBudget=value;
+  localStorage.setItem('md_fuel_budget',String(fuelBudget));
+  render();
+  alert('Reserva de gasolina atualizada. O saldo geral livre foi recalculado!');
+});
+$('fuelAmount').addEventListener('input',updateFuelPrice);
+$('fuelLiters').addEventListener('input',updateFuelPrice);
+$('fuelForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const amount=Number($('fuelAmount').value),liters=Number($('fuelLiters').value);
+  if(!Number.isFinite(amount)||amount<=0||!Number.isFinite(liters)||liters<=0){
+    alert('Informe um valor pago e uma quantidade de litros válidos.');return;
+  }
+  fuelRecords.push({
+    id:Date.now()+Math.random(),
+    amount,liters,date:$('fuelDate').value,
+    km:$('fuelKm').value.trim(),
+    station:$('fuelStation').value.trim()
+  });
+  saveFuel();
+  $('fuelForm').reset();
+  $('fuelDate').value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+  updateFuelPrice();renderFuel();
+});
+
+$('saveGoal').addEventListener('click',()=>{const n=Number($('goalInput').value);if(!Number.isFinite(n)||n<=0){alert('Informe uma meta válida.');return;}goal=n;save();render();alert('Meta atualizada!');});
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+render();
+</script>
+</body></html>
